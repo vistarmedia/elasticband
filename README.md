@@ -98,7 +98,8 @@ set up from scratch. This is pretty darn slow, but seems most correct to me. One
 problem here is that if pypi is having problems that day, your boot could hang
 or fail waiting for packages to come down.
 
-Check out the `example` directory for an example of a virtualenv setup.
+Check out the [example](/vistarmedia/elasticband/tree/master/example) directory
+for an example of a virtualenv setup.
 
 ### Creating warfiles
 When this project is compile, it'll generate an empty war file which won't do
