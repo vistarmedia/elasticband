@@ -1,0 +1,66 @@
+#!/usr/bin/env python
+
+import os
+import shutil
+import sys
+
+from optparse import OptionParser
+from os import system
+from tempfile import mkdtemp
+
+class tempdir(object):
+  def __enter__(self):
+    self._dir = mkdtemp()
+    return self._dir
+
+  def __exit__(self, type, value, tb):
+    shutil.rmtree(self._dir)    
+
+def _exec(command):
+  print '[CMD]', command
+ 
+  exit_code = system(command) 
+  if(exit_code != 0):
+    print 'Non-zero exit code', exit_code
+    sys.exit(exit_code)
+
+def main(src_dir, warfile, webxml, output):
+  if output is not None:
+    copy_war = 'cp %s %s' % (warfile, output) 
+    _exec(copy_war)
+  else:
+    output = warfile
+
+  with tempdir() as dest:
+    fq_dest = os.path.join(dest, 'WEB-INF', 'classes')
+    fq_parent = os.path.join(dest, 'WEB-INF')
+    os.makedirs(fq_parent)
+
+    shutil.copytree(src_dir, fq_dest)
+
+    if webxml is not None:
+      shutil.copy(webxml, fq_parent)
+
+    slipstream_root = 'jar uvf %s -C %s .' % (output, dest)
+    _exec(slipstream_root)
+
+  return 0
+
+if __name__ == '__main__':
+  usage = "usage: %prog [options] SRC_DIR WAR_FILE"
+  parser = OptionParser(usage)
+
+  parser.add_option('-w', '--webxml', dest='webxml',
+    help='web.xml file to be packaged in to the resulting war')
+
+  parser.add_option('-o', '--output', dest='output',
+    help='Output to a new warfile without touching the origional')
+
+  (options, args) = parser.parse_args()
+
+  if len(args) != 2:
+    parser.print_help()
+    sys.exit(1)
+
+  (src_dir, warfile) = args
+  sys.exit(main(src_dir, warfile, options.webxml, options.output))

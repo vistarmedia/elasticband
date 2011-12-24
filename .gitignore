@@ -1,0 +1,5 @@
+*.war
+.classpath
+.project
+.settings
+target
