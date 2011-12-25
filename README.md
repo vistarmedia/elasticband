@@ -119,3 +119,20 @@ up to Elastic Beanstalk.
 This project was hacked out in an evening to see if I could. It's not presently
 used in a production environment as far as I know. Some of the code is very
 round about. Patches are welcome.
+
+
+### TODOs
+* The Async HTTP Client seems a bit overkill since the servlet processing thread
+  must block until completion, but the idea of using http-client just hurts me.
+* The target is Elastic Beanstalk, so perhaps there's a way to force Tomcat to
+  handle async responses? It does't seem to want to run the servlet 3.0 API, but
+  there is
+  [this](http://tomcat.apache.org/tomcat-7.0-doc/aio.html#Asynchronous_writes),
+  but I don't think EB is using APR or NIO HTTP connectors.
+* Static files served directly by the servlet container
+* There are some issues on AWS I can't recreate locally where the environment
+  will try to spawn many runtimes. /me scratches head.
+* Of course, some non-python runtime
+* When the container starts up, it doesn't wait to see when the subprocess binds
+  to the port, so the first N requests probably just bomb. Not a big deal w/ EB
+  due to the LB health checks

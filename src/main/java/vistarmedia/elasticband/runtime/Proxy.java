@@ -1,14 +1,8 @@
 package vistarmedia.elasticband.runtime;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.util.Enumeration;
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
@@ -19,18 +13,13 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.log4j.Logger;
 
 import com.google.inject.Singleton;
-import com.ning.http.client.AsyncHandler;
 import com.ning.http.client.AsyncHttpClient;
-import com.ning.http.client.AsyncHttpClientConfig;
-import com.ning.http.client.HttpResponseBodyPart;
-import com.ning.http.client.HttpResponseHeaders;
-import com.ning.http.client.HttpResponseStatus;
 import com.ning.http.client.AsyncHttpClient.BoundRequestBuilder;
+import com.ning.http.client.AsyncHttpClientConfig;
 import com.ning.http.client.AsyncHttpClientConfig.Builder;
 
 @Singleton
 public class Proxy {
-  private Semaphore           connLock;
   private int                 applicationPort;
   private static final long   maxWaitMillis = 1000;
   private static final Logger log           = Logger.getLogger(Proxy.class);
@@ -39,9 +28,7 @@ public class Proxy {
 
   @Inject
   public Proxy(ElasticBandRuntime runtime,
-      @Named("maxconnections") int maxConnections,
       @Named("application.port") int applicationPort) {
-    this.connLock = new Semaphore(maxConnections);
     this.applicationPort = applicationPort;
     this.runtime = runtime;
     
@@ -53,6 +40,36 @@ public class Proxy {
     runtime.ensureRunning();
     String url = prepareUrl(req);
     handleSafely(client.prepareGet(url), req, res, false);
+  }
+  
+  public void doPost(HttpServletRequest req, HttpServletResponse res) {
+    runtime.ensureRunning();
+    String url = prepareUrl(req);
+    handleSafely(client.preparePost(url), req, res, true);
+  }
+  
+  public void doHead(HttpServletRequest req, HttpServletResponse res) {
+    runtime.ensureRunning();
+    String url = prepareUrl(req);
+    handleSafely(client.prepareHead(url), req, res, false);
+  }
+  
+  public void doOptions(HttpServletRequest req, HttpServletResponse res) {
+    runtime.ensureRunning();
+    String url = prepareUrl(req);
+    handleSafely(client.prepareOptions(url), req, res, false);
+  }
+  
+  public void doPut(HttpServletRequest req, HttpServletResponse res) {
+    runtime.ensureRunning();
+    String url = prepareUrl(req);
+    handleSafely(client.preparePut(url), req, res, true);
+  }
+  
+  public void doDelete(HttpServletRequest req, HttpServletResponse res) {
+    runtime.ensureRunning();
+    String url = prepareUrl(req);
+    handleSafely(client.prepareDelete(url), req, res, false);
   }
   
   private void handleSafely(BoundRequestBuilder conn, HttpServletRequest req,
@@ -76,71 +93,19 @@ public class Proxy {
       final HttpServletRequest req, final HttpServletResponse res,
       boolean writeBody) throws IOException, InterruptedException {
 
-    final CountDownLatch latch = new CountDownLatch(1);
-    final InputStream body = req.getInputStream();
-    final OutputStream responseBody = res.getOutputStream();
-
     conn = copyHeaders(conn, req);
     if (writeBody) {
-      conn = conn.setBody(body);
+      conn = conn.setBody(req.getInputStream());
     }
 
-    connLock.acquire();
-    conn.execute(new AsyncHandler<Void>() {
+    ProxyResponseHandler handler = new ProxyResponseHandler(req, res);
+    conn.execute(handler);
 
-      public STATE onBodyPartReceived(HttpResponseBodyPart part)
-          throws Exception {
-        responseBody.write(part.getBodyPartBytes());
-        return STATE.CONTINUE;
-      }
-
-      public Void onCompleted() throws Exception {
-        responseBody.close();
-        latch.countDown();
-        return null;
-      }
-
-      public STATE onHeadersReceived(HttpResponseHeaders headers)
-          throws Exception {
-        for (Entry<String, List<String>> entry : headers.getHeaders()) {
-          String name = entry.getKey();
-          for (String value : entry.getValue()) {
-            res.addHeader(name, value);
-          }
-        }
-        return STATE.CONTINUE;
-      }
-
-      public STATE onStatusReceived(HttpResponseStatus status) throws Exception {
-        int code = status.getStatusCode();
-        res.setStatus(code);
-        if (code != 200) {
-          res.sendError(code, status.getStatusText());
-        } else {
-          res.setStatus(HttpServletResponse.SC_OK);
-        }
-        return STATE.CONTINUE;
-      }
-
-      public void onThrowable(Throwable t) {
-        log.error("Response Error", t);
-        try {
-          res.sendError(500, t.getLocalizedMessage());
-          latch.countDown();
-        } catch (IOException e) {
-          log.error("Uncatchable response error", e);
-        }
-      }
-
-    });
-
-    if (!latch.await(maxWaitMillis, TimeUnit.MILLISECONDS)) {
+    if(! handler.wait(maxWaitMillis, TimeUnit.MILLISECONDS)) {
       log.error("Request exceeded maximum time");
     }
-    connLock.release();
   }
 
-  @SuppressWarnings("unchecked")
   private BoundRequestBuilder copyHeaders(BoundRequestBuilder conn,
       HttpServletRequest req) {
     Enumeration<String> headerNames = req.getHeaderNames();

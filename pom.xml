@@ -50,12 +50,25 @@
   		<name>Sonatype Release</name>
   		<url>http://oss.sonatype.org/content/repositories/releases</url>
   	</repository>
+  	<repository>
+  	  <id>java.net</id>
+  	  <url>http://download.java.net/maven/2</url>
+  	</repository>
   </repositories>
   <dependencies>
+  	<dependency>
+  		<groupId>javax</groupId>
+  		<artifactId>javaee-api</artifactId>
+  		<version>6.0</version>
+  		<type>jar</type>
+  		<scope>provided</scope>
+  		<optional>false</optional>
+  	</dependency>
   	<dependency>
   		<groupId>junit</groupId>
   		<artifactId>junit</artifactId>
   		<version>4.10</version>
+  		<type>jar</type>
   		<scope>test</scope>
   		<optional>false</optional>
   	</dependency>
@@ -63,31 +76,28 @@
   		<groupId>com.google.inject</groupId>
   		<artifactId>guice</artifactId>
   		<version>3.0</version>
+  		<type>jar</type>
   		<optional>false</optional>
   	</dependency>
   	<dependency>
   		<groupId>log4j</groupId>
   		<artifactId>log4j</artifactId>
   		<version>1.2.16</version>
+  		<type>jar</type>
   		<optional>false</optional>
   	</dependency>
   	<dependency>
   		<groupId>com.google.inject.extensions</groupId>
   		<artifactId>guice-servlet</artifactId>
   		<version>3.0</version>
+  		<type>jar</type>
   		<optional>false</optional>
   	</dependency>
   	<dependency>
   		<groupId>com.ning</groupId>
   		<artifactId>async-http-client</artifactId>
   		<version>1.6.5</version>
-  		<optional>false</optional>
-  	</dependency>
-  	<dependency>
-  		<groupId>javax.servlet</groupId>
-  		<artifactId>servlet-api</artifactId>
-  		<version>2.5</version>
-  		<scope>provided</scope>
+  		<type>jar</type>
   		<optional>false</optional>
   	</dependency>
   </dependencies>

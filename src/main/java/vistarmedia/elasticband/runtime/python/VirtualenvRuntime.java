@@ -36,6 +36,7 @@ public class VirtualenvRuntime extends ElasticBandRuntime {
   @Inject
   public VirtualenvRuntime(Shell shell, Path path,
       @Named("python.virtualenv.url") String fallbackUrl,
+      @Named("python.virtualenv.root") String root,
       @Named("application.root") String applicationRoot,
       @Named("application.requirements") String requirements) {
     try {
@@ -47,7 +48,7 @@ public class VirtualenvRuntime extends ElasticBandRuntime {
     this.shell = shell;
     this.path = path;
     this.hostPython = getHostPython();
-    this.virtualenvRoot = getTemporaryDirectory();
+    this.virtualenvRoot = getRoot(root);
 
     createVirtualenv(this.virtualenvRoot);
 
@@ -126,6 +127,18 @@ public class VirtualenvRuntime extends ElasticBandRuntime {
       bail("No Python Found");
     }
     return hostPython;
+  }
+
+  private File getRoot(String givenRoot) {
+    File root = null;
+    if (givenRoot.equals("")) {
+      root = getTemporaryDirectory();
+    } else {
+      root = new File(givenRoot);
+      root.mkdirs();
+    }
+    log.info("Using virtualenv root: " + root);
+    return root;
   }
 
   private File getTemporaryDirectory() {

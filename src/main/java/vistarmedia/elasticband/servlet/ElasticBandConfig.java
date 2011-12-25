@@ -18,17 +18,17 @@ public class ElasticBandConfig extends ServletModule {
   private static final Logger log               = Logger
                                                     .getLogger(ElasticBandConfig.class);
 
-  private static final int    MAX_CONNECTIONS   = 10;
+  private static final int    MAX_CONNECTIONS   = 5;
   private static final String VENV_FALLBACK_URL = "https://raw.github.com/pypa/virtualenv/master/virtualenv.py";
 
   // @TODO: static directories
   @Override
   protected void configureServlets() {
-    Properties config = null;
+    Properties config = getDefaults();
     Class<ElasticBandRuntime> runtimeClass = null;
 
     try {
-      config = getContextProperties();
+      config = getContextProperties(config);
       runtimeClass = getRuntime(config.get("application.runtime").toString());
     } catch (Throwable t) {
       log.fatal("Couldn't create runtime", t);
@@ -40,6 +40,16 @@ public class ElasticBandConfig extends ServletModule {
     serve("*").with(Servlet.class);
   }
 
+  private Properties getDefaults() {
+    Properties properties = new Properties();
+    
+    properties.put("maxconnections", "" + MAX_CONNECTIONS);
+    properties.put("python.virtualenv.url", VENV_FALLBACK_URL);
+    properties.put("python.virtualenv.root", "");
+    
+    return properties;
+  }
+  
   private Class<ElasticBandRuntime> getRuntime(String name)
       throws ClassNotFoundException {
     if ("python".equals(name) || name == null) {
@@ -57,11 +67,9 @@ public class ElasticBandConfig extends ServletModule {
     return rtClass;
   }
 
-  private Properties getContextProperties() {
+  private Properties getContextProperties(Properties properties) {
     ServletContext ctx = getServletContext();
-    Properties properties = new Properties();
 
-    @SuppressWarnings("unchecked")
     Enumeration<String> propNames = ctx.getInitParameterNames();
     while (propNames.hasMoreElements()) {
       String key = propNames.nextElement();
@@ -74,8 +82,7 @@ public class ElasticBandConfig extends ServletModule {
 
     properties.put("application.root", ctx.getRealPath("/"));
     properties.put("application.port", "" + getFreePort());
-    properties.put("maxconnections", "" + MAX_CONNECTIONS);
-    properties.put("python.virtualenv.url", VENV_FALLBACK_URL);
+
     return properties;
   }
 
